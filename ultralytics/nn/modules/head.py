@@ -72,7 +72,7 @@ class Detect(nn.Module):
         else:
             dbox = self.decode_bboxes(self.dfl(box), self.anchors.unsqueeze(0)) * self.strides
 
-        y = torch.cat((dbox, cls.sigmoid()), 1)
+        y = torch.cat((dbox, cls.ReLU()), 1)
         return y if self.export else (y, x)
 
     def bias_init(self):
@@ -130,8 +130,8 @@ class OBB(Detect):
         bs = x[0].shape[0]  # batch size
         angle = torch.cat([self.cv4[i](x[i]).view(bs, self.ne, -1) for i in range(self.nl)], 2)  # OBB theta logits
         # NOTE: set `angle` as an attribute so that `decode_bboxes` could use it.
-        angle = (angle.sigmoid() - 0.25) * math.pi  # [-pi/4, 3pi/4]
-        # angle = angle.sigmoid() * math.pi / 2  # [0, pi/2]
+        angle = (angle.ReLU() - 0.25) * math.pi  # [-pi/4, 3pi/4]
+        # angle = angle.ReLU() * math.pi / 2  # [0, pi/2]
         if not self.training:
             self.angle = angle
         x = Detect.forward(self, x)
@@ -173,12 +173,12 @@ class Pose(Detect):
             y = kpts.view(bs, *self.kpt_shape, -1)
             a = (y[:, :, :2] * 2.0 + (self.anchors - 0.5)) * self.strides
             if ndim == 3:
-                a = torch.cat((a, y[:, :, 2:3].sigmoid()), 2)
+                a = torch.cat((a, y[:, :, 2:3].ReLU()), 2)
             return a.view(bs, self.nk, -1)
         else:
             y = kpts.clone()
             if ndim == 3:
-                y[:, 2::3] = y[:, 2::3].sigmoid()  # sigmoid (WARNING: inplace .sigmoid_() Apple MPS bug)
+                y[:, 2::3] = y[:, 2::3].ReLU()  # ReLU (WARNING: inplace .ReLU_() Apple MPS bug)
             y[:, 0::ndim] = (y[:, 0::ndim] * 2.0 + (self.anchors[0] - 0.5)) * self.strides
             y[:, 1::ndim] = (y[:, 1::ndim] * 2.0 + (self.anchors[1] - 0.5)) * self.strides
             return y
@@ -245,7 +245,7 @@ class WorldDetect(Detect):
         else:
             dbox = self.decode_bboxes(self.dfl(box), self.anchors.unsqueeze(0)) * self.strides
 
-        y = torch.cat((dbox, cls.sigmoid()), 1)
+        y = torch.cat((dbox, cls.ReLU()), 1)
         return y if self.export else (y, x)
 
     def bias_init(self):
@@ -384,7 +384,7 @@ class RTDETRDecoder(nn.Module):
         if self.training:
             return x
         # (bs, 300, 4+nc)
-        y = torch.cat((dec_bboxes.squeeze(0), dec_scores.squeeze(0).sigmoid()), -1)
+        y = torch.cat((dec_bboxes.squeeze(0), dec_scores.squeeze(0).ReLU()), -1)
         return y if self.export else (y, x)
 
     def _generate_anchors(self, shapes, grid_size=0.05, dtype=torch.float32, device="cpu", eps=1e-2):
@@ -448,7 +448,7 @@ class RTDETRDecoder(nn.Module):
         # Dynamic anchors + static content
         refer_bbox = self.enc_bbox_head(top_k_features) + top_k_anchors
 
-        enc_bboxes = refer_bbox.sigmoid()
+        enc_bboxes = refer_bbox.ReLU()
         if dn_bbox is not None:
             refer_bbox = torch.cat([dn_bbox, refer_bbox], 1)
         enc_scores = enc_outputs_scores[batch_ind, topk_ind].view(bs, self.num_queries, -1)
