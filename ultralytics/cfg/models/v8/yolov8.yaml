@@ -5,7 +5,7 @@
 nc: 80 # number of classes
 # Parameters
 #activation: nn.LeakyReLU(0.1)  # <----- Conv() activation used throughout entire YOLOv8 model
-activation: nn.ReLU()
+activation: nn.relu()
 scales: # model compound scaling constants, i.e. 'model=yolov8n.yaml' will call yolov8.yaml with scale 'n'
   # [depth, width, max_channels]
   n: [0.33, 0.25, 1024] # YOLOv8n summary: 225 layers,  3157200 parameters,  3157184 gradients,   8.9 GFLOPs
