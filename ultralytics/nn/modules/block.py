@@ -431,7 +431,7 @@ class MaxSigmoidAttnBlock(nn.Module):
         aw = aw.max(dim=-1)[0]
         aw = aw / (self.hc**0.5)
         aw = aw + self.bias[None, :, None, None]
-        aw = aw.sigmoid() * self.scale
+        aw = aw.ReLU() * self.scale
 
         x = self.proj_conv(x)
         x = x.view(bs, self.nh, -1, h, w)
