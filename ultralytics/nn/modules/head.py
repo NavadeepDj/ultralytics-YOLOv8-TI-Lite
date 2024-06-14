@@ -16,6 +16,7 @@ from .utils import bias_init_with_prob, linear_init
 
 __all__ = "Detect", "Segment", "Pose", "Classify", "OBB", "RTDETRDecoder"
 
+import torch.nn.functional as F
 
 class Detect(nn.Module):
     """YOLOv8 Detect head for detection models."""
@@ -72,7 +73,8 @@ class Detect(nn.Module):
         else:
             dbox = self.decode_bboxes(self.dfl(box), self.anchors.unsqueeze(0)) * self.strides
 
-        y = torch.cat((dbox, cls.ReLU()), 1)
+        cls = F.relu(cls)  # Apply ReLU activation function
+        y = torch.cat((dbox, cls), 1)
         return y if self.export else (y, x)
 
     def bias_init(self):
@@ -87,6 +89,7 @@ class Detect(nn.Module):
     def decode_bboxes(self, bboxes, anchors):
         """Decode bounding boxes."""
         return dist2bbox(bboxes, anchors, xywh=True, dim=1)
+
 
 
 class Segment(Detect):
